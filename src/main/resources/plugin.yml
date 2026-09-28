@@ -1,0 +1,6 @@
+name: Farm_Plugin
+version: '${version}'
+
+main: com.korensurge.farmPlugin.FarmPlugin
+api-version: '1.21.11'
+load: POSTWORLD
