@@ -1,22 +1,24 @@
 package com.korensurge.farmPlugin;
 
+import java.util.concurrent.ThreadLocalRandom;
 import org.bukkit.Material;
 import org.bukkit.block.Block;
 import org.bukkit.block.data.Ageable;
+import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.BlockBreakEvent;
+import org.bukkit.inventory.ItemStack;
 import org.bukkit.plugin.java.JavaPlugin;
 
+import java.util.Map;
 import java.util.Set;
+import java.util.random.RandomGenerator;
 
 /*
 
 Ideas:
-
-When block breaks, cancel the break and set the block to air. This will prevent
-crops or items from dropping outside of what we set to drop.
 
 Multiply drop amount by Fortune level (check hoe for enchantment)
 
@@ -79,7 +81,7 @@ public class BountifulYield implements Listener{
         Block eventBlock = event.getBlock();
 
         //Check if broken block is a breakable crop
-        if (!BREAKABLE_CROPS.contains(eventBlock.getType())) {
+        if (!BREAKABLE_CROPS.contains(eventBlock.getType()) || !HARVESTABLE_CROPS.contains(eventBlock.getType())) {
             return;
         }
 
@@ -87,6 +89,9 @@ public class BountifulYield implements Listener{
 
         // Check if block has age data and check if fully grown
         if (eventBlock.getBlockData() instanceof Ageable ageable) {
+            event.setCancelled(true);
+            player.sendMessage("Event Cancelled");
+
             int currentAge = ageable.getAge();
             int maxAge = ageable.getMaximumAge();
             boolean fullyGrown = (currentAge == maxAge);
@@ -95,8 +100,31 @@ public class BountifulYield implements Listener{
             player.sendMessage("Current Age: " + currentAge);
             player.sendMessage("Max Age: " + maxAge);
             player.sendMessage("Fully Grown: " + fullyGrown);
-        }
 
+            if (fullyGrown) {
+                eventBlock.setType(Material.AIR);
+            }
+
+            ItemStack tool = player.getInventory().getItemInMainHand();
+
+            int toolMult = switch (tool.getType()) {
+                case Material.WOODEN_HOE -> 1;
+                case Material.STONE_HOE -> 1;
+                case Material.IRON_HOE -> 2;
+                case Material.GOLDEN_HOE -> 2;
+                case Material.DIAMOND_HOE -> 3;
+                case Material.NETHERITE_HOE -> 3;
+                default -> 0;
+            };
+
+            int fortLevel = tool.getEnchantmentLevel(Enchantment.FORTUNE);
+            int fortMult = (1/(fortLevel+2)) + ((1+fortLevel)/2);
+
+            // Paper automatically takes into account Unbreaking
+            tool.damage(1, player);
+
+            int totalMult = fortMult * toolMult;
+        }
 
 
         //display hand return
