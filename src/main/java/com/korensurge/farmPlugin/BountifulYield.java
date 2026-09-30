@@ -86,11 +86,16 @@ public class BountifulYield implements Listener{
             return;
         }
         player.sendMessage("<--- Triggering Handle Harvest --->");
-        handleHarvest(event, player, block, blockType, "break");
+        boolean complete = handleHarvest(event, player, block, blockType, "break");
+        if (complete) {
+            event.setCancelled(true);
+            block.setType(Material.AIR);
+            player.sendMessage("<--- Complete --->");
+        }
+        else {
+            player.sendMessage("<--- Not Eligible --->");
+        }
 
-        event.setCancelled(true);
-        block.setType(Material.AIR);
-        player.sendMessage("<--- Complete --->");
     }
 
 
@@ -119,7 +124,7 @@ public class BountifulYield implements Listener{
 
 
 
-    private void handleHarvest(Event event, Player player, Block block, Material blockType, String eventType) {
+    private boolean handleHarvest(Event event, Player player, Block block, Material blockType, String eventType) {
 
         player.sendMessage("Handling Harvest");
 
@@ -139,9 +144,9 @@ public class BountifulYield implements Listener{
                 player.sendMessage("Fully Grown: " + fullyGrown);
 
                 // Return if not fully grown, normal behavior will be followed
-                if (!fullyGrown) { return; }
+                if (!fullyGrown) { return false; }
 
-            } else { player.sendMessage("No Age Data"); return; }
+            } else { player.sendMessage("No Age Data"); }
         }
 
 
@@ -211,13 +216,15 @@ public class BountifulYield implements Listener{
 
         // Take Fortune enchantment into account
         int fortLevel = tool.getEnchantmentLevel(Enchantment.FORTUNE);
-        int fortMult = (1/(fortLevel+2)) + ((1+fortLevel)/2); // Equation to determine average drop mult based on Fortune lvl
+        float fortMult = ((float) 1 /(fortLevel+2)) + ((float) (1 + fortLevel) /2); // Equation to determine average drop mult based on Fortune lvl
 
-        int totalMult = fortMult * toolMult;
+        float totalMult = fortMult * toolMult;
 
         // Damage Hoe
         // Paper automatically takes into account Unbreaking
-        tool.damage(1, player);
+        if (tool.getType() != Material.AIR && (toolMult > 0)) {
+            tool.damage(1, player);
+        }
 
         if (Objects.equals(eventType, "break")) {
             player.sendMessage("<--- Dropping Item --->");
@@ -229,13 +236,17 @@ public class BountifulYield implements Listener{
             if (crop == Material.SEA_PICKLE) {
                 if (block.getBlockData() instanceof SeaPickle pickles) {
                     totalMult *= pickles.getPickles();
-                    world.dropItemNaturally(location, new ItemStack(crop, totalMult));
+                    world.dropItemNaturally(location, new ItemStack(crop, Math.round(totalMult)));
+                    return true;
                 }
 
             } else {
                 // Drop items
-                world.dropItemNaturally(location, new ItemStack(crop, totalMult));
-                world.dropItemNaturally(location, new ItemStack(seed, 1));
+                world.dropItemNaturally(location, new ItemStack(crop, Math.round(totalMult)));
+                if (seed != Material.AIR) {
+                    world.dropItemNaturally(location, new ItemStack(seed, 1));
+                }
+                return true;
             }
         }
 
@@ -243,14 +254,14 @@ public class BountifulYield implements Listener{
 
         if (Objects.equals(eventType, "harvest")) {
             player.sendMessage("<--- Giving Item --->");
-            // Glow Berry if statement
-            if (crop == Material.GLOW_BERRIES) {
-                giveItemOrDrop(player, new ItemStack(crop, totalMult));
 
-                if (block.getBlockData() instanceof CaveVines vines) {vines.setBerries(false);}
-                if (block.getBlockData() instanceof CaveVinesPlant vines) {vines.setBerries(false);}
+            if (crop == Material.GLOW_BERRIES) {
+                giveItemOrDrop(player, new ItemStack(crop, Math.round(totalMult)));
+
+                if (block.getBlockData() instanceof CaveVines vines) {vines.setBerries(false); block.setBlockData(vines);}
+                if (block.getBlockData() instanceof CaveVinesPlant vines) {vines.setBerries(false); block.setBlockData(vines);}
             }
-            // Sweet berry if statement
+
             if (crop == Material.SWEET_BERRIES){
                 if (block.getBlockData() instanceof Ageable ageable) {
 
@@ -260,23 +271,26 @@ public class BountifulYield implements Listener{
                     int randomNumber = ThreadLocalRandom.current().nextInt(1, 101);
                     if (currentAge == 3) {
                         if (randomNumber > 50) {
-                            giveItemOrDrop(player, new ItemStack(crop, totalMult*2));
+                            giveItemOrDrop(player, new ItemStack(crop, Math.round(totalMult)*2));
                         } else {
-                            giveItemOrDrop(player, new ItemStack(crop, totalMult));
+                            giveItemOrDrop(player, new ItemStack(crop, Math.round(totalMult)));
                         }
                     }
                     if (currentAge == 4) {
                         if (randomNumber > 50) {
-                            giveItemOrDrop(player, new ItemStack(crop, totalMult*3));
+                            giveItemOrDrop(player, new ItemStack(crop, Math.round(totalMult)*3));
                         } else {
-                            giveItemOrDrop(player, new ItemStack(crop, totalMult*2));
+                            giveItemOrDrop(player, new ItemStack(crop, Math.round(totalMult)*2));
                         }
                     }
                     // Reset to age 1
                     ageable.setAge(1);
+                    block.setBlockData(ageable);
                 }
             }
+            return true;
         }
+        return false;
     } // End of handleHarvest
 
 
