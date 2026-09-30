@@ -1,4 +1,18 @@
-# Project exclude paths
-/.gradle/
-/build/
-/build/classes/java/main/
+# Gradle build artifacts and caches
+.gradle/
+build/
+out/
+
+# IDE files (IntelliJ IDEA)
+.idea/
+*.iml
+*.iws
+*.ipr
+
+# OS metadata
+.DS_Store
+Thumbs.db
+
+# Optional: compiled jar outputs or local test server directory
+*.jar
+run/
