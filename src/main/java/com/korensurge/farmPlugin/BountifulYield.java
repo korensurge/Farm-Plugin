@@ -2,8 +2,12 @@ package com.korensurge.farmPlugin;
 
 import org.bukkit.Location;
 import org.bukkit.Material;
+import org.bukkit.World;
 import org.bukkit.block.Block;
 import org.bukkit.block.data.Ageable;
+import org.bukkit.block.data.type.CaveVines;
+import org.bukkit.block.data.type.CaveVinesPlant;
+import org.bukkit.block.data.type.SeaPickle;
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.Player;
 import org.bukkit.event.Event;
@@ -14,6 +18,9 @@ import org.bukkit.event.player.PlayerHarvestBlockEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.plugin.java.JavaPlugin;
 
+import java.util.Objects;
+import java.util.concurrent.ThreadLocalRandom;
+import java.util.HashMap;
 import java.util.Set;
 
 /*
@@ -23,14 +30,7 @@ Ideas:
 Add command that allows moderator to turn of bountiful yield per player
 /bountifulyield <name> <crop> <true/false>
 
-SEA_PICKLES should give hoe amount by a multiplier equal to number of pickles in the cluster
-
-Ensure AGE metadata is high enough that the crop would give yield upon breaking
-
-If all works, decrease hoe durability by 1
-
-Need to check how blockBreakEvent works for bamboo/sugar_cane/kelp
- */
+*/
 
 public class BountifulYield implements Listener{
 
@@ -47,6 +47,7 @@ public class BountifulYield implements Listener{
             Material.MELON,
             Material.PUMPKIN,
             Material.TORCHFLOWER_CROP,
+            Material.TORCHFLOWER,
             Material.PITCHER_PLANT,
             Material.BAMBOO,
             Material.COCOA,
@@ -63,42 +64,60 @@ public class BountifulYield implements Listener{
     );
 
     private final Set<Material> HARVESTABLE_CROPS = Set.of(
-            Material.SWEET_BERRIES,
-            Material.GLOW_BERRIES
+            Material.SWEET_BERRY_BUSH,
+            Material.CAVE_VINES,
+            Material.CAVE_VINES_PLANT
     );
+
+
+
+
 
     @EventHandler(ignoreCancelled = true)
     public void onBlockBreak(BlockBreakEvent event) {
         Block block = event.getBlock();
         Material blockType = block.getType();
         Player player = event.getPlayer();
+        // Add Player permission logic -----------------<>
         player.sendMessage("<--- Break Event Triggered! --->");
 
         if (!BREAKABLE_CROPS.contains(blockType)) {
+            player.sendMessage("<--- Block not recognized --->");
             return;
         }
-
+        player.sendMessage("<--- Triggering Handle Harvest --->");
         handleHarvest(event, player, block, blockType, "break");
 
         event.setCancelled(true);
         block.setType(Material.AIR);
+        player.sendMessage("<--- Complete --->");
     }
+
+
+
+
 
     @EventHandler(ignoreCancelled = true)
     public void onPlayerHarvest(PlayerHarvestBlockEvent event) {
         Block block = event.getHarvestedBlock();
         Material blockType = block.getType();
         Player player = event.getPlayer();
+        // Add Player permission logic -----------------<>
         player.sendMessage("<--- Harvest Event Triggered! --->");
 
         if (!HARVESTABLE_CROPS.contains(blockType)) {
+            player.sendMessage("<--- Block not recognized --->");
             return;
         }
-
+        player.sendMessage("<--- Triggering Handle Harvest --->");
         handleHarvest(event, player, block, blockType, "harvest");
-
+        player.sendMessage("<--- Complete --->");
         event.setCancelled(true);
     }
+
+
+
+
 
     private void handleHarvest(Event event, Player player, Block block, Material blockType, String eventType) {
 
@@ -106,34 +125,34 @@ public class BountifulYield implements Listener{
 
         ItemStack tool = player.getInventory().getItemInMainHand();
 
-        // Check if block has age data and check if fully grown
-        if (eventType == "break") {
+        // Check if breakable block has age data and check if fully grown
+        if (Objects.equals(eventType, "break")) {
             if (block.getBlockData() instanceof Ageable ageable) {
 
                 int currentAge = ageable.getAge();
                 int maxAge = ageable.getMaximumAge();
                 boolean fullyGrown = (currentAge == maxAge);
 
-                // Paper automatically takes into account Unbreaking
-                tool.damage(1, player);
-
                 player.sendMessage("Block Type: " + blockType);
                 player.sendMessage("Current Age: " + currentAge);
                 player.sendMessage("Max Age: " + maxAge);
                 player.sendMessage("Fully Grown: " + fullyGrown);
 
+                // Return if not fully grown, normal behavior will be followed
                 if (!fullyGrown) { return; }
 
             } else { player.sendMessage("No Age Data"); return; }
-
         }
 
+
+        // Define item to be dropped based on the block
         Material crop = switch (blockType) {
             case Material.WHEAT -> Material.WHEAT;
             case Material.BEETROOTS -> Material.BEETROOT;
             case Material.CARROTS -> Material.CARROT;
             case Material.MELON -> Material.MELON;
             case Material.PUMPKIN -> Material.PUMPKIN;
+            case Material.TORCHFLOWER -> Material.TORCHFLOWER;
             case Material.TORCHFLOWER_CROP -> Material.TORCHFLOWER;
             case Material.PITCHER_PLANT -> Material.PITCHER_PLANT;
             case Material.BAMBOO -> Material.BAMBOO;
@@ -148,32 +167,38 @@ public class BountifulYield implements Listener{
             case Material.CRIMSON_FUNGUS -> Material.CRIMSON_FUNGUS;
             case Material.WARPED_FUNGUS -> Material.WARPED_FUNGUS;
             case Material.SEA_PICKLE -> Material.SEA_PICKLE;
+            case Material.CAVE_VINES -> Material.GLOW_BERRIES;
+            case Material.CAVE_VINES_PLANT -> Material.GLOW_BERRIES;
+            case Material.SWEET_BERRY_BUSH -> Material.SWEET_BERRIES;
             default -> Material.AIR;
         };
 
+        // Determine seed to be dropped based on the block
         Material seed = switch (blockType) {
-            case Material.WHEAT -> Material.WHEAT;
-            case Material.BEETROOTS -> Material.BEETROOT;
-            case Material.CARROTS -> Material.CARROT;
-            case Material.MELON -> Material.MELON;
-            case Material.PUMPKIN -> Material.PUMPKIN;
-            case Material.TORCHFLOWER_CROP -> Material.TORCHFLOWER;
-            case Material.PITCHER_PLANT -> Material.PITCHER_PLANT;
-            case Material.BAMBOO -> Material.BAMBOO;
-            case Material.COCOA -> Material.COCOA_BEANS;
-            case Material.SUGAR_CANE -> Material.SUGAR_CANE;
-            case Material.CACTUS -> Material.CACTUS;
-            case Material.BROWN_MUSHROOM -> Material.BROWN_MUSHROOM;
-            case Material.RED_MUSHROOM -> Material.RED_MUSHROOM;
-            case Material.KELP -> Material.KELP;
-            case Material.KELP_PLANT -> Material.KELP;
-            case Material.NETHER_WART -> Material.NETHER_WART;
-            case Material.CRIMSON_FUNGUS -> Material.CRIMSON_FUNGUS;
-            case Material.WARPED_FUNGUS -> Material.WARPED_FUNGUS;
-            case Material.SEA_PICKLE -> Material.SEA_PICKLE;
+            case Material.WHEAT -> Material.WHEAT_SEEDS;
+            case Material.BEETROOTS -> Material.BEETROOT_SEEDS;
+            case Material.CARROTS -> Material.AIR;
+            case Material.MELON -> Material.MELON_SEEDS;
+            case Material.PUMPKIN -> Material.PUMPKIN_SEEDS;
+            case Material.TORCHFLOWER -> Material.TORCHFLOWER_SEEDS;
+            case Material.TORCHFLOWER_CROP -> Material.TORCHFLOWER_SEEDS;
+            case Material.PITCHER_PLANT -> Material.PITCHER_POD;
+            case Material.BAMBOO -> Material.AIR;
+            case Material.COCOA -> Material.AIR;
+            case Material.SUGAR_CANE -> Material.AIR;
+            case Material.CACTUS -> Material.AIR;
+            case Material.BROWN_MUSHROOM -> Material.AIR;
+            case Material.RED_MUSHROOM -> Material.AIR;
+            case Material.KELP -> Material.AIR;
+            case Material.KELP_PLANT -> Material.AIR;
+            case Material.NETHER_WART -> Material.AIR;
+            case Material.CRIMSON_FUNGUS -> Material.AIR;
+            case Material.WARPED_FUNGUS -> Material.AIR;
+            case Material.SEA_PICKLE -> Material.AIR;
             default -> Material.AIR;
         };
 
+        // Determine multiplier based on hoe quality
         int toolMult = switch (tool.getType()) {
             case Material.WOODEN_HOE -> 1;
             case Material.STONE_HOE -> 1;
@@ -184,30 +209,91 @@ public class BountifulYield implements Listener{
             default -> 0;
         };
 
+        // Take Fortune enchantment into account
         int fortLevel = tool.getEnchantmentLevel(Enchantment.FORTUNE);
-        int fortMult = (1/(fortLevel+2)) + ((1+fortLevel)/2);
+        int fortMult = (1/(fortLevel+2)) + ((1+fortLevel)/2); // Equation to determine average drop mult based on Fortune lvl
 
         int totalMult = fortMult * toolMult;
 
-        if (eventType == "break") {
+        // Damage Hoe
+        // Paper automatically takes into account Unbreaking
+        tool.damage(1, player);
+
+        if (Objects.equals(eventType, "break")) {
+            player.sendMessage("<--- Dropping Item --->");
 
             Location location = block.getLocation();
+            World world = block.getWorld();
 
-            // Sea Pickle if statement
+            // If Sea Pickles, account for varying pickle value of block
+            if (crop == Material.SEA_PICKLE) {
+                if (block.getBlockData() instanceof SeaPickle pickles) {
+                    totalMult *= pickles.getPickles();
+                    world.dropItemNaturally(location, new ItemStack(crop, totalMult));
+                }
 
-            // Give player totalMult number of items
-
-            // Give player seed(s)
-
+            } else {
+                // Drop items
+                world.dropItemNaturally(location, new ItemStack(crop, totalMult));
+                world.dropItemNaturally(location, new ItemStack(seed, 1));
+            }
         }
 
-        if (eventType == "harvest") {
+
+
+        if (Objects.equals(eventType, "harvest")) {
+            player.sendMessage("<--- Giving Item --->");
             // Glow Berry if statement
-            // Sweet berry if statement
-                // 1-2 at age 3, 2-3 at age 4
-                // Reset to age 1
-        }
+            if (crop == Material.GLOW_BERRIES) {
+                giveItemOrDrop(player, new ItemStack(crop, totalMult));
 
+                if (block.getBlockData() instanceof CaveVines vines) {vines.setBerries(false);}
+                if (block.getBlockData() instanceof CaveVinesPlant vines) {vines.setBerries(false);}
+            }
+            // Sweet berry if statement
+            if (crop == Material.SWEET_BERRIES){
+                if (block.getBlockData() instanceof Ageable ageable) {
+
+                    int currentAge = ageable.getAge();
+
+                    // implement random chance of 1-2 berry base at age 3, 2-3 berry base at age 4
+                    int randomNumber = ThreadLocalRandom.current().nextInt(1, 101);
+                    if (currentAge == 3) {
+                        if (randomNumber > 50) {
+                            giveItemOrDrop(player, new ItemStack(crop, totalMult*2));
+                        } else {
+                            giveItemOrDrop(player, new ItemStack(crop, totalMult));
+                        }
+                    }
+                    if (currentAge == 4) {
+                        if (randomNumber > 50) {
+                            giveItemOrDrop(player, new ItemStack(crop, totalMult*3));
+                        } else {
+                            giveItemOrDrop(player, new ItemStack(crop, totalMult*2));
+                        }
+                    }
+                    // Reset to age 1
+                    ageable.setAge(1);
+                }
+            }
+        }
+    } // End of handleHarvest
+
+
+
+
+
+    private void giveItemOrDrop(Player player, ItemStack item) {
+
+        HashMap<Integer, ItemStack> overflow = player.getInventory().addItem(item);
+
+        if (!overflow.isEmpty()) {
+            for (ItemStack leftover : overflow.values()) {
+                // Drop the leftover items at the player's current location
+                player.getWorld().dropItemNaturally(player.getLocation(), leftover);
+            }
+        }
     }
+
 
 }

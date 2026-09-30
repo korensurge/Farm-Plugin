@@ -6,17 +6,17 @@ public final class FarmPlugin extends JavaPlugin {
 
     @Override
     public void onEnable() {
-        // Plugin startup message
         getLogger().info("Hello World. Farm Plugin has started.");
-        // Activate Listeners
+
+        // Activate Handlers
         getServer().getPluginManager().registerEvents(new BountifulYield(this), this);
         // Listen for commands to trigger classes
     }
 
     @Override
     public void onDisable() {
-        // Plugin shutdown logic
         getLogger().info("Goodbye World. Farm Plugin has shut down.");
-        // Potentially save databse info or config
+
+        // Potentially save database info or config
     }
 }
