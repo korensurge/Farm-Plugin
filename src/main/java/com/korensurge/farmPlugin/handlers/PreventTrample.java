@@ -21,15 +21,15 @@ public class PreventTrample implements Listener {
     }
 
 
+    // Detects if the a trample event occurs on farmland and cancels it if they are assigned the farmland.preventtrample perm
     @EventHandler(ignoreCancelled = true)
     public void onFarmTrample(PlayerInteractEvent event) {
         if (event.getAction() == Action.PHYSICAL) {
             Block block = event.getClickedBlock();
             if (block != null && block.getType() == Material.FARMLAND) {
-                event.getPlayer().sendMessage("Trample Event Triggered");
+                // Check for permission, cancel if true
                 if (plugin.getPermissionManager().hasFeaturePermission(event.getPlayer(), PermissionManager.PREVENT_TRAMPLE_PERM)) {
                     event.setCancelled(true);
-                    event.getPlayer().sendMessage("Trample Event Cancelled");
                 }
             }
         }

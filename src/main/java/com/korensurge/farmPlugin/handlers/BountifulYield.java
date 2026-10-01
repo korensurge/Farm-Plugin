@@ -14,14 +14,14 @@ import org.bukkit.block.data.type.CaveVinesPlant;
 import org.bukkit.block.data.type.SeaPickle;
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.Player;
-import org.bukkit.event.Event;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
-import org.bukkit.event.block.BlockBreakEvent;
+import org.bukkit.event.block.*;
+import org.bukkit.event.entity.EntityExplodeEvent;
 import org.bukkit.event.player.PlayerHarvestBlockEvent;
 import org.bukkit.inventory.ItemStack;
-import org.bukkit.plugin.java.JavaPlugin;
 
+import java.util.Iterator;
 import java.util.Objects;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.HashMap;
@@ -40,6 +40,7 @@ public class BountifulYield implements Listener{
 
 
 
+    // List of Block-Break Harvestable Crops
     private final Set<Material> BREAKABLE_CROPS = Set.of(
             Material.WHEAT,
             Material.BEETROOTS,
@@ -63,62 +64,128 @@ public class BountifulYield implements Listener{
             Material.SEA_PICKLE
     );
 
+    // List of Right-Click Harvestable Crops
     private final Set<Material> HARVESTABLE_CROPS = Set.of(
             Material.SWEET_BERRY_BUSH,
             Material.CAVE_VINES,
             Material.CAVE_VINES_PLANT
     );
 
+    // Prevent water from destroying crops
+    @EventHandler(ignoreCancelled = true)
+    public void onWaterBreakCrop(BlockFromToEvent event) {
+        Block targetBlock = event.getToBlock();
+        Material targetMaterial = targetBlock.getType();
+
+        if (BREAKABLE_CROPS.contains(targetMaterial) || HARVESTABLE_CROPS.contains(targetMaterial)) {
+            event.setCancelled(true);
+        }
+    }
+
+    // Prevent piston from breaking crops by pushing
+    @EventHandler(ignoreCancelled = true)
+    public void onPistonExtend(BlockPistonExtendEvent event) {
+        // Iterate through affected blocks
+        for (Block block : event.getBlocks()) {
+            Material targetMaterial = block.getType();
+            // Cancel if crop
+            if (BREAKABLE_CROPS.contains(targetMaterial) || HARVESTABLE_CROPS.contains(targetMaterial)) {
+                event.setCancelled(true);
+                break;
+            }
+        }
+    }
+
+    // Prevent piston from breaking crops by pulling
+    @EventHandler(ignoreCancelled = true)
+    public void onPistonRetract(BlockPistonRetractEvent event) {
+        // Iterate through affected blocks
+        for (Block block : event.getBlocks()) {
+            Material targetMaterial = block.getType();
+
+            // Check if the block being pulled itself is a crop
+            if (BREAKABLE_CROPS.contains(targetMaterial) || HARVESTABLE_CROPS.contains(targetMaterial)) {
+                event.setCancelled(true);
+                return;
+            }
+
+            // Check if the block ABOVE the pulled block has a crop attached to it
+            Block blockAbove = block.getRelative(BlockFace.UP);
+            Material aboveMaterial = blockAbove.getType();
+
+            if (BREAKABLE_CROPS.contains(aboveMaterial) || HARVESTABLE_CROPS.contains(aboveMaterial)) {
+                event.setCancelled(true);
+                return;
+            }
+        }
+    }
+
+    // Prevent entity explosions from destroying crops
+    @EventHandler(ignoreCancelled = true)
+    public void onEntityExplode(EntityExplodeEvent event) {
+        protectCropsFromExplosionList(event.blockList());
+    }
+
+    // Prevent block explosions from destroying crops
+    @EventHandler(ignoreCancelled = true)
+    public void onBlockExplode(BlockExplodeEvent event) {
+        protectCropsFromExplosionList(event.blockList());
+    }
 
 
+    // Iterates through list of blocks set to be affected by explosions and cancels any crops from being destroyed
+    private void protectCropsFromExplosionList(java.util.List<Block> blocks) {
+        Iterator<Block> iterator = blocks.iterator();
+        while (iterator.hasNext()) {
+            Block block = iterator.next();
+            Material targetMaterial = block.getType();
+
+            // Protect both the crop itself and the Farmland soil beneath it
+            if (BREAKABLE_CROPS.contains(targetMaterial) || HARVESTABLE_CROPS.contains(targetMaterial) || targetMaterial == Material.FARMLAND) {
+                iterator.remove(); // Removes the block from destruction list
+            }
+        }
+    }
 
 
+    // Handler for crops that are harvested by breaking the crop
     @EventHandler(ignoreCancelled = true)
     public void onBlockBreak(BlockBreakEvent event) {
         Block block = event.getBlock();
         Material blockType = block.getType();
         Player player = event.getPlayer();
 
-        // Check if player has feature activated
-        if (!player.hasPermission(PermissionManager.BOUNTIFUL_YIELD_PERM)) { player.sendMessage("<--- Not Allowed --->"); return; }
+        // Check if player has farmland.bountifulyield perm, vanilla behavior if not
+        if (!player.hasPermission(PermissionManager.BOUNTIFUL_YIELD_PERM)) { return; }
 
-        player.sendMessage("<--- Break Event Triggered! --->");
-
+        // If broken block is not a crop, vanilla behavior
         if (!BREAKABLE_CROPS.contains(blockType)) {
-            player.sendMessage("<--- Block not recognized --->");
             return;
         }
-        player.sendMessage("<--- Triggering Handle Harvest --->");
 
-        if (blockType == Material.SUGAR_CANE || blockType == Material.KELP_PLANT || blockType == Material.KELP ) {
+        // If crop is a towering crop, special behavior to account for above crops
+        if (blockType == Material.BAMBOO || blockType == Material.SUGAR_CANE || blockType == Material.KELP_PLANT || blockType == Material.KELP ) {
             Block current = block;
-            int count = 0;
 
+            // special clause is needed here as top of kelp crop is always Material.KELP
             if (blockType == Material.KELP_PLANT || blockType == Material.KELP) {
                 while (current.getType() == Material.KELP || current.getType() == Material.KELP_PLANT) {
-                    count++;
                     handleHarvest(player, current, blockType, "break");
                     current.setType(Material.AIR);
                     current = current.getRelative(BlockFace.UP);
                 }
-            } else {
+            } else { // Handles bamboo and sugar cane
                 while (current.getType() == blockType) {
-                    count++;
                     handleHarvest(player, current, blockType, "break");
                     current.setType(Material.AIR);
                     current = current.getRelative(BlockFace.UP);
                 }
             }
-            player.sendMessage(count + " harvested");
-
-        } else {
+        } else { // Handles non-towering crops
             boolean complete = handleHarvest(player, block, blockType, "break");
             if (complete) {
                 event.setCancelled(true);
                 block.setType(Material.AIR);
-                player.sendMessage("<--- Complete --->");
-            } else {
-                player.sendMessage("<--- Not Eligible --->");
             }
         }
 
@@ -127,38 +194,35 @@ public class BountifulYield implements Listener{
 
 
 
-
+    // Handler for crops that are harvested by right-clicking the crop
     @EventHandler(ignoreCancelled = true)
     public void onPlayerHarvest(PlayerHarvestBlockEvent event) {
         Block block = event.getHarvestedBlock();
         Material blockType = block.getType();
         Player player = event.getPlayer();
 
-        // Check if player has feature activated
-        if (!player.hasPermission(PermissionManager.BOUNTIFUL_YIELD_PERM)) { player.sendMessage("<--- Not Allowed --->"); return; }
-        player.sendMessage("<--- Harvest Event Triggered! --->");
+        // Check if player has farmland.bountifulyield perm, vanilla behavior if not
+        if (!player.hasPermission(PermissionManager.BOUNTIFUL_YIELD_PERM)) { return; }
 
+        // If harvested block is not a crop, vanilla behavior
         if (!HARVESTABLE_CROPS.contains(blockType)) {
-            player.sendMessage("<--- Block not recognized --->");
             return;
         }
-        player.sendMessage("<--- Triggering Handle Harvest --->");
         handleHarvest(player, block, blockType, "harvest");
-        player.sendMessage("<--- Complete --->");
         event.setCancelled(true);
     }
 
 
 
 
-
+    // Class to handle the harvest
     private boolean handleHarvest(Player player, Block block, Material blockType, String eventType) {
 
-        player.sendMessage("Handling Harvest");
 
         ItemStack tool = player.getInventory().getItemInMainHand();
 
         // Check if breakable block has age data and check if fully grown
+        // No need for this check for right-click harvestable crops as the PlayerHarvestBlockEvent can only be triggered if they are of an appropriate age
         if (Objects.equals(eventType, "break")) {
             if (block.getBlockData() instanceof Ageable ageable) {
 
@@ -166,15 +230,11 @@ public class BountifulYield implements Listener{
                 int maxAge = ageable.getMaximumAge();
                 boolean fullyGrown = (currentAge == maxAge);
 
-                player.sendMessage("Block Type: " + blockType);
-                player.sendMessage("Current Age: " + currentAge);
-                player.sendMessage("Max Age: " + maxAge);
-                player.sendMessage("Fully Grown: " + fullyGrown);
-
                 // Return if not fully grown, normal behavior will be followed
-                if (!fullyGrown && (blockType != Material.SUGAR_CANE) && (blockType != Material.KELP) && (blockType != Material.KELP_PLANT) ) { return false; }
+                // Not applicable to towering crops as age does not determine harvestability
+                if (!fullyGrown && (blockType != Material.BAMBOO) && (blockType != Material.SUGAR_CANE) && (blockType != Material.KELP) && (blockType != Material.KELP_PLANT) ) { return false; }
 
-            } else { player.sendMessage("No Age Data"); }
+            }
         }
 
 
@@ -210,27 +270,13 @@ public class BountifulYield implements Listener{
         Material seed = switch (blockType) {
             case Material.WHEAT -> Material.WHEAT_SEEDS;
             case Material.BEETROOTS -> Material.BEETROOT_SEEDS;
-            case Material.CARROTS -> Material.AIR;
-            case Material.MELON -> Material.AIR;
-            case Material.PUMPKIN -> Material.AIR;
             case Material.TORCHFLOWER -> Material.TORCHFLOWER_SEEDS;
             case Material.TORCHFLOWER_CROP -> Material.TORCHFLOWER_SEEDS;
             case Material.PITCHER_PLANT -> Material.PITCHER_POD;
-            case Material.BAMBOO -> Material.AIR;
-            case Material.COCOA -> Material.AIR;
-            case Material.SUGAR_CANE -> Material.AIR;
-            case Material.CACTUS -> Material.AIR;
-            case Material.BROWN_MUSHROOM -> Material.AIR;
-            case Material.RED_MUSHROOM -> Material.AIR;
-            case Material.KELP -> Material.AIR;
-            case Material.KELP_PLANT -> Material.AIR;
-            case Material.NETHER_WART -> Material.AIR;
-            case Material.CRIMSON_FUNGUS -> Material.AIR;
-            case Material.WARPED_FUNGUS -> Material.AIR;
-            case Material.SEA_PICKLE -> Material.AIR;
             default -> Material.AIR;
         };
 
+        // Determine number of seeds dropped by vanilla
         int seedMult = switch (seed) {
             case Material.WHEAT_SEEDS -> ThreadLocalRandom.current().nextInt(1, 5);
             case Material.BEETROOT_SEEDS -> ThreadLocalRandom.current().nextInt(1, 5);
@@ -253,6 +299,7 @@ public class BountifulYield implements Listener{
         // Take Fortune enchantment into account
         int fortLevel = tool.getEnchantmentLevel(Enchantment.FORTUNE);
 
+        // Replicates vanilla fortune chances
         int chance = ThreadLocalRandom.current().nextInt(1, 101);
         int fortMult = switch (fortLevel) {
             case 1:
@@ -286,8 +333,6 @@ public class BountifulYield implements Listener{
         int totalMult = fortMult * toolMult;
         int seedDrop = fortMult * seedMult;
 
-        player.sendMessage("Fort Mult:" + fortMult);
-        player.sendMessage("Tool Mult:" + toolMult);
         if (totalMult <= 0) {
             player.sendMessage("Non-hoe Item Used");
             return true;
@@ -299,9 +344,9 @@ public class BountifulYield implements Listener{
             tool.damage(1, player);
         }
 
-        if (Objects.equals(eventType, "break")) {
-            player.sendMessage("<--- Dropping Item --->");
 
+        // Item spawn behavior for break type harvests
+        if (Objects.equals(eventType, "break")) {
             Location location = block.getLocation();
             World world = block.getWorld();
 
@@ -310,23 +355,19 @@ public class BountifulYield implements Listener{
                 if (block.getBlockData() instanceof SeaPickle pickles) {
                     totalMult *= pickles.getPickles();
                     int drop = totalMult;
-                    player.sendMessage("Dropping " + drop + " " + crop);
                     world.dropItemNaturally(location, new ItemStack(crop, drop));
                     return true;
                 }
 
             } else if (crop == Material.MELON) {
                 int drop = totalMult*ThreadLocalRandom.current().nextInt(3, 8);
-                player.sendMessage("Dropping " + drop + " " + crop);
                 world.dropItemNaturally(location, new ItemStack(crop, drop));
 
             } else {
                 // Drop items
                 int drop = totalMult;
-                player.sendMessage("Dropping " + drop + " " + crop);
                 world.dropItemNaturally(location, new ItemStack(crop, drop));
                 if (seed != Material.AIR) {
-                    player.sendMessage("Dropping " + seedDrop + " " + seed);
                     world.dropItemNaturally(location, new ItemStack(seed, seedDrop));
                 }
                 return true;
@@ -334,9 +375,8 @@ public class BountifulYield implements Listener{
         }
 
 
-
+        // Item spawn behavior for PlayerHarvest type harvests
         if (Objects.equals(eventType, "harvest")) {
-            player.sendMessage("<--- Giving Item --->");
 
             if (crop == Material.GLOW_BERRIES) {
                 int drop = totalMult;
@@ -376,8 +416,8 @@ public class BountifulYield implements Listener{
 
 
     private void giveItemOrDrop(Player player, Material item, int drop) {
-        player.sendMessage("Dropping " + drop + " " + item);
 
+        // Save any items not able to fit into the player's inventory
         HashMap<Integer, ItemStack> overflow = player.getInventory().addItem(new ItemStack(item, drop));
 
         if (!overflow.isEmpty()) {

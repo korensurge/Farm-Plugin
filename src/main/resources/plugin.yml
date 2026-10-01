@@ -11,6 +11,10 @@ commands:
     usage: /farmplugin <feature> <player> <true|false>
     permission: farmplugin.admin
     aliases: [fp, farm]
+  tagchest:
+    description: Marks the targeted chest as an infinite item source.
+    permission: op
+    usage: /tagchest
 
 permissions:
   farmplugin.admin:
