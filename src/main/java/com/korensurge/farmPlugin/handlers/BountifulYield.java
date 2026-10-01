@@ -1,4 +1,7 @@
-package com.korensurge.farmPlugin;
+package com.korensurge.farmPlugin.handlers;
+
+import com.korensurge.farmPlugin.FarmPlugin;
+import com.korensurge.farmPlugin.manager.PermissionManager;
 
 import org.bukkit.Location;
 import org.bukkit.Material;
@@ -24,22 +27,18 @@ import java.util.concurrent.ThreadLocalRandom;
 import java.util.HashMap;
 import java.util.Set;
 
-/*
 
-Ideas:
 
-Add command that allows moderator to turn of bountiful yield per player
-/bountifulyield <name> <true/false>
-
-*/
 
 public class BountifulYield implements Listener{
 
-    private final JavaPlugin plugin;
-    public BountifulYield(JavaPlugin plugin) {
+    private final FarmPlugin plugin;
+    public BountifulYield(FarmPlugin plugin) {
 
         this.plugin = plugin;
     }
+
+
 
     private final Set<Material> BREAKABLE_CROPS = Set.of(
             Material.WHEAT,
@@ -79,7 +78,10 @@ public class BountifulYield implements Listener{
         Block block = event.getBlock();
         Material blockType = block.getType();
         Player player = event.getPlayer();
-        // Add Player permission logic -----------------<>
+
+        // Check if player has feature activated
+        if (!player.hasPermission(PermissionManager.BOUNTIFUL_YIELD_PERM)) { player.sendMessage("<--- Not Allowed --->"); return; }
+
         player.sendMessage("<--- Break Event Triggered! --->");
 
         if (!BREAKABLE_CROPS.contains(blockType)) {
@@ -131,7 +133,9 @@ public class BountifulYield implements Listener{
         Block block = event.getHarvestedBlock();
         Material blockType = block.getType();
         Player player = event.getPlayer();
-        // Add Player permission logic -----------------<>
+
+        // Check if player has feature activated
+        if (!player.hasPermission(PermissionManager.BOUNTIFUL_YIELD_PERM)) { player.sendMessage("<--- Not Allowed --->"); return; }
         player.sendMessage("<--- Harvest Event Triggered! --->");
 
         if (!HARVESTABLE_CROPS.contains(blockType)) {

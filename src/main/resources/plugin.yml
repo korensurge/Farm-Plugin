@@ -4,3 +4,21 @@ version: '${version}'
 main: com.korensurge.farmPlugin.FarmPlugin
 api-version: '1.21.11'
 load: POSTWORLD
+
+commands:
+  farmplugin:
+    description: Enable or Disable FarmPlugin features for a player.
+    usage: /farmplugin <feature> <player> <true|false>
+    permission: farmplugin.admin
+    aliases: [fp, farm]
+
+permissions:
+  farmplugin.admin:
+    description: Allows using plugin management commands
+    default: op
+  farmplugin.bountifulyield:
+    description: Allows player to use custom crop harvest yield mechanics.
+    default: true   # Set to true if active by default for everyone, or false/op
+  farmplugin.preventtrample:
+    description: Prevents farmland from being trampled when stepped on.
+    default: true
