@@ -356,7 +356,7 @@ public class BountifulYield implements Listener {
                     return true;
                 }
 
-            } else if (crop == Material.MELON) {
+            } else if (crop == Material.MELON_SLICE) {
                 int drop = totalMult * ThreadLocalRandom.current().nextInt(3, 8);
                 world.dropItemNaturally(location, new ItemStack(crop, drop));
 

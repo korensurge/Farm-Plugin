@@ -165,7 +165,7 @@ public class ChestListener implements Listener {
             return;
         }
 
-        // Cancel interaction if event affects chest lost and user is not an admin
+        // Cancel interaction if event affects chest slot and user is not an admin
         boolean affectsChest = event.getRawSlots().stream().anyMatch(slot -> slot < topInventory.getSize());
         if (affectsChest && !player.hasPermission(PermissionManager.ADMIN_PERM)) {
             event.setCancelled(true);
