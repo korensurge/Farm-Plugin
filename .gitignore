@@ -1,19 +1,23 @@
 # Gradle build artifacts and caches
-/.gradle/
-/build/
-/out/
+.gradle/
+build/
+out/
 
 # IDE files (IntelliJ IDEA)
-/.idea/
+.idea/
 *.iml
 *.iws
 *.ipr
-*.xml
 
 # OS metadata
 .DS_Store
 Thumbs.db
+*.DS_Store
 
-# Optional: compiled jar outputs or local test server directory
+# Compiled outputs and test server environment
 *.jar
+*.war
 /run/
+
+# Local developer overrides / logs
+*.log
