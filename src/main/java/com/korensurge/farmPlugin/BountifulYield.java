@@ -4,6 +4,7 @@ import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.World;
 import org.bukkit.block.Block;
+import org.bukkit.block.BlockFace;
 import org.bukkit.block.data.Ageable;
 import org.bukkit.block.data.type.CaveVines;
 import org.bukkit.block.data.type.CaveVinesPlant;
@@ -28,7 +29,7 @@ import java.util.Set;
 Ideas:
 
 Add command that allows moderator to turn of bountiful yield per player
-/bountifulyield <name> <crop> <true/false>
+/bountifulyield <name> <true/false>
 
 */
 
@@ -86,14 +87,37 @@ public class BountifulYield implements Listener{
             return;
         }
         player.sendMessage("<--- Triggering Handle Harvest --->");
-        boolean complete = handleHarvest(event, player, block, blockType, "break");
-        if (complete) {
-            event.setCancelled(true);
-            block.setType(Material.AIR);
-            player.sendMessage("<--- Complete --->");
-        }
-        else {
-            player.sendMessage("<--- Not Eligible --->");
+
+        if (blockType == Material.SUGAR_CANE || blockType == Material.KELP_PLANT || blockType == Material.KELP ) {
+            Block current = block;
+            int count = 0;
+
+            if (blockType == Material.KELP_PLANT || blockType == Material.KELP) {
+                while (current.getType() == Material.KELP || current.getType() == Material.KELP_PLANT) {
+                    count++;
+                    handleHarvest(player, current, blockType, "break");
+                    current.setType(Material.AIR);
+                    current = current.getRelative(BlockFace.UP);
+                }
+            } else {
+                while (current.getType() == blockType) {
+                    count++;
+                    handleHarvest(player, current, blockType, "break");
+                    current.setType(Material.AIR);
+                    current = current.getRelative(BlockFace.UP);
+                }
+            }
+            player.sendMessage(count + " harvested");
+
+        } else {
+            boolean complete = handleHarvest(player, block, blockType, "break");
+            if (complete) {
+                event.setCancelled(true);
+                block.setType(Material.AIR);
+                player.sendMessage("<--- Complete --->");
+            } else {
+                player.sendMessage("<--- Not Eligible --->");
+            }
         }
 
     }
@@ -115,7 +139,7 @@ public class BountifulYield implements Listener{
             return;
         }
         player.sendMessage("<--- Triggering Handle Harvest --->");
-        handleHarvest(event, player, block, blockType, "harvest");
+        handleHarvest(player, block, blockType, "harvest");
         player.sendMessage("<--- Complete --->");
         event.setCancelled(true);
     }
@@ -124,7 +148,7 @@ public class BountifulYield implements Listener{
 
 
 
-    private boolean handleHarvest(Event event, Player player, Block block, Material blockType, String eventType) {
+    private boolean handleHarvest(Player player, Block block, Material blockType, String eventType) {
 
         player.sendMessage("Handling Harvest");
 
@@ -144,7 +168,7 @@ public class BountifulYield implements Listener{
                 player.sendMessage("Fully Grown: " + fullyGrown);
 
                 // Return if not fully grown, normal behavior will be followed
-                if (!fullyGrown) { return false; }
+                if (!fullyGrown && (blockType != Material.SUGAR_CANE) && (blockType != Material.KELP) && (blockType != Material.KELP_PLANT) ) { return false; }
 
             } else { player.sendMessage("No Age Data"); }
         }
@@ -155,7 +179,7 @@ public class BountifulYield implements Listener{
             case Material.WHEAT -> Material.WHEAT;
             case Material.BEETROOTS -> Material.BEETROOT;
             case Material.CARROTS -> Material.CARROT;
-            case Material.MELON -> Material.MELON;
+            case Material.MELON -> Material.MELON_SLICE;
             case Material.PUMPKIN -> Material.PUMPKIN;
             case Material.TORCHFLOWER -> Material.TORCHFLOWER;
             case Material.TORCHFLOWER_CROP -> Material.TORCHFLOWER;
@@ -183,8 +207,8 @@ public class BountifulYield implements Listener{
             case Material.WHEAT -> Material.WHEAT_SEEDS;
             case Material.BEETROOTS -> Material.BEETROOT_SEEDS;
             case Material.CARROTS -> Material.AIR;
-            case Material.MELON -> Material.MELON_SEEDS;
-            case Material.PUMPKIN -> Material.PUMPKIN_SEEDS;
+            case Material.MELON -> Material.AIR;
+            case Material.PUMPKIN -> Material.AIR;
             case Material.TORCHFLOWER -> Material.TORCHFLOWER_SEEDS;
             case Material.TORCHFLOWER_CROP -> Material.TORCHFLOWER_SEEDS;
             case Material.PITCHER_PLANT -> Material.PITCHER_POD;
@@ -203,6 +227,14 @@ public class BountifulYield implements Listener{
             default -> Material.AIR;
         };
 
+        int seedMult = switch (seed) {
+            case Material.WHEAT_SEEDS -> ThreadLocalRandom.current().nextInt(1, 5);
+            case Material.BEETROOT_SEEDS -> ThreadLocalRandom.current().nextInt(1, 5);
+            case Material.TORCHFLOWER_SEEDS -> 1;
+            case Material.PITCHER_POD -> 1;
+            default -> 0;
+        };
+
         // Determine multiplier based on hoe quality
         int toolMult = switch (tool.getType()) {
             case Material.WOODEN_HOE -> 1;
@@ -216,9 +248,46 @@ public class BountifulYield implements Listener{
 
         // Take Fortune enchantment into account
         int fortLevel = tool.getEnchantmentLevel(Enchantment.FORTUNE);
-        float fortMult = ((float) 1 /(fortLevel+2)) + ((float) (1 + fortLevel) /2); // Equation to determine average drop mult based on Fortune lvl
 
-        float totalMult = fortMult * toolMult;
+        int chance = ThreadLocalRandom.current().nextInt(1, 101);
+        int fortMult = switch (fortLevel) {
+            case 1:
+                if (chance <= 66) {
+                    yield 1;
+                } else {
+                    yield 2;
+                }
+            case 2:
+                if (chance <= 50) {
+                    yield 1;
+                } else if (chance <= 75) {
+                    yield 2;
+                } else {
+                    yield 3;
+                }
+            case 3:
+                if (chance <= 40) {
+                    yield 1;
+                } else if (chance <= 60) {
+                    yield 2;
+                } else if (chance <= 80) {
+                    yield 3;
+                } else {
+                    yield 4;
+                }
+            default:
+                yield 1;
+        };
+
+        int totalMult = fortMult * toolMult;
+        int seedDrop = fortMult * seedMult;
+
+        player.sendMessage("Fort Mult:" + fortMult);
+        player.sendMessage("Tool Mult:" + toolMult);
+        if (totalMult <= 0) {
+            player.sendMessage("Non-hoe Item Used");
+            return true;
+        }
 
         // Damage Hoe
         // Paper automatically takes into account Unbreaking
@@ -236,15 +305,25 @@ public class BountifulYield implements Listener{
             if (crop == Material.SEA_PICKLE) {
                 if (block.getBlockData() instanceof SeaPickle pickles) {
                     totalMult *= pickles.getPickles();
-                    world.dropItemNaturally(location, new ItemStack(crop, Math.round(totalMult)));
+                    int drop = totalMult;
+                    player.sendMessage("Dropping " + drop + " " + crop);
+                    world.dropItemNaturally(location, new ItemStack(crop, drop));
                     return true;
                 }
 
+            } else if (crop == Material.MELON) {
+                int drop = totalMult*ThreadLocalRandom.current().nextInt(3, 8);
+                player.sendMessage("Dropping " + drop + " " + crop);
+                world.dropItemNaturally(location, new ItemStack(crop, drop));
+
             } else {
                 // Drop items
-                world.dropItemNaturally(location, new ItemStack(crop, Math.round(totalMult)));
+                int drop = totalMult;
+                player.sendMessage("Dropping " + drop + " " + crop);
+                world.dropItemNaturally(location, new ItemStack(crop, drop));
                 if (seed != Material.AIR) {
-                    world.dropItemNaturally(location, new ItemStack(seed, 1));
+                    player.sendMessage("Dropping " + seedDrop + " " + seed);
+                    world.dropItemNaturally(location, new ItemStack(seed, seedDrop));
                 }
                 return true;
             }
@@ -256,7 +335,8 @@ public class BountifulYield implements Listener{
             player.sendMessage("<--- Giving Item --->");
 
             if (crop == Material.GLOW_BERRIES) {
-                giveItemOrDrop(player, new ItemStack(crop, Math.round(totalMult)));
+                int drop = totalMult;
+                giveItemOrDrop(player, crop, drop);
 
                 if (block.getBlockData() instanceof CaveVines vines) {vines.setBerries(false); block.setBlockData(vines);}
                 if (block.getBlockData() instanceof CaveVinesPlant vines) {vines.setBerries(false); block.setBlockData(vines);}
@@ -267,21 +347,15 @@ public class BountifulYield implements Listener{
 
                     int currentAge = ageable.getAge();
 
-                    // implement random chance of 1-2 berry base at age 3, 2-3 berry base at age 4
+                    // implement random chance of 1-2 berry base at age 2, 2-3 berry base at age 4
                     int randomNumber = ThreadLocalRandom.current().nextInt(1, 101);
-                    if (currentAge == 3) {
-                        if (randomNumber > 50) {
-                            giveItemOrDrop(player, new ItemStack(crop, Math.round(totalMult)*2));
-                        } else {
-                            giveItemOrDrop(player, new ItemStack(crop, Math.round(totalMult)));
-                        }
+                    if (currentAge == 2) {
+                        int drop = totalMult*ThreadLocalRandom.current().nextInt(1, 3);
+                        giveItemOrDrop(player, crop, drop);
                     }
-                    if (currentAge == 4) {
-                        if (randomNumber > 50) {
-                            giveItemOrDrop(player, new ItemStack(crop, Math.round(totalMult)*3));
-                        } else {
-                            giveItemOrDrop(player, new ItemStack(crop, Math.round(totalMult)*2));
-                        }
+                    if (currentAge == 3) {
+                        int drop = totalMult*ThreadLocalRandom.current().nextInt(2, 4);
+                        giveItemOrDrop(player, crop, drop);
                     }
                     // Reset to age 1
                     ageable.setAge(1);
@@ -297,9 +371,10 @@ public class BountifulYield implements Listener{
 
 
 
-    private void giveItemOrDrop(Player player, ItemStack item) {
+    private void giveItemOrDrop(Player player, Material item, int drop) {
+        player.sendMessage("Dropping " + drop + " " + item);
 
-        HashMap<Integer, ItemStack> overflow = player.getInventory().addItem(item);
+        HashMap<Integer, ItemStack> overflow = player.getInventory().addItem(new ItemStack(item, drop));
 
         if (!overflow.isEmpty()) {
             for (ItemStack leftover : overflow.values()) {

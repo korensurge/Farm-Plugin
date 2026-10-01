@@ -1,10 +1,10 @@
 # Gradle build artifacts and caches
-.gradle/
-build/
-out/
+/.gradle/
+/build/
+/out/
 
 # IDE files (IntelliJ IDEA)
-.idea/
+/.idea/
 *.iml
 *.iws
 *.ipr
@@ -15,4 +15,4 @@ Thumbs.db
 
 # Optional: compiled jar outputs or local test server directory
 *.jar
-run/
+/run/
