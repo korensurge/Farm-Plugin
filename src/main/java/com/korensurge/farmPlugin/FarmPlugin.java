@@ -27,8 +27,8 @@ public final class FarmPlugin extends JavaPlugin {
         }
 
         // Instantiate listener for TagChestCommand
-        if (getCommand("tagChest") != null) {
-            getCommand("tagChest").setExecutor(new TagChestCommand(this));
+        if (getCommand("infinitechest") != null) {
+            getCommand("infinitechest").setExecutor(new TagChestCommand(this));
         }
 
         // Activate Handlers

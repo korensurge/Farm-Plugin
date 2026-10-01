@@ -11,15 +11,15 @@ commands:
     usage: /farmplugin <feature> <player> <true|false>
     permission: farmplugin.admin
     aliases: [fp, farm]
-  tagchest:
+  infinitechest:
     description: Marks the targeted chest as an infinite item source.
-    permission: op
-    usage: /tagchest
+    permission: farmplugin.admin
+    usage: /infinitechest <true|false>
 
 permissions:
   farmplugin.admin:
     description: Allows using plugin management commands
-    default: op
+    default: false
   farmplugin.bountifulyield:
     description: Allows player to use custom crop harvest yield mechanics.
     default: true   # Set to true if active by default for everyone, or false/op
