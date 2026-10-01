@@ -28,18 +28,9 @@ import java.util.HashMap;
 import java.util.Set;
 
 
-
-
-public class BountifulYield implements Listener{
+public class BountifulYield implements Listener {
 
     private final FarmPlugin plugin;
-    public BountifulYield(FarmPlugin plugin) {
-
-        this.plugin = plugin;
-    }
-
-
-
     // List of Block-Break Harvestable Crops
     private final Set<Material> BREAKABLE_CROPS = Set.of(
             Material.WHEAT,
@@ -63,13 +54,17 @@ public class BountifulYield implements Listener{
             Material.WARPED_FUNGUS,
             Material.SEA_PICKLE
     );
-
     // List of Right-Click Harvestable Crops
     private final Set<Material> HARVESTABLE_CROPS = Set.of(
             Material.SWEET_BERRY_BUSH,
             Material.CAVE_VINES,
             Material.CAVE_VINES_PLANT
     );
+
+    public BountifulYield(FarmPlugin plugin) {
+
+        this.plugin = plugin;
+    }
 
     // Prevent water from destroying crops
     @EventHandler(ignoreCancelled = true)
@@ -156,7 +151,9 @@ public class BountifulYield implements Listener{
         Player player = event.getPlayer();
 
         // Check if player has farmland.bountifulyield perm, vanilla behavior if not
-        if (!player.hasPermission(PermissionManager.BOUNTIFUL_YIELD_PERM)) { return; }
+        if (!player.hasPermission(PermissionManager.BOUNTIFUL_YIELD_PERM)) {
+            return;
+        }
 
         // If broken block is not a crop, vanilla behavior
         if (!BREAKABLE_CROPS.contains(blockType)) {
@@ -164,7 +161,7 @@ public class BountifulYield implements Listener{
         }
 
         // If crop is a towering crop, special behavior to account for above crops
-        if (blockType == Material.BAMBOO || blockType == Material.SUGAR_CANE || blockType == Material.KELP_PLANT || blockType == Material.KELP ) {
+        if (blockType == Material.BAMBOO || blockType == Material.SUGAR_CANE || blockType == Material.KELP_PLANT || blockType == Material.KELP) {
             Block current = block;
 
             // special clause is needed here as top of kelp crop is always Material.KELP
@@ -192,8 +189,6 @@ public class BountifulYield implements Listener{
     }
 
 
-
-
     // Handler for crops that are harvested by right-clicking the crop
     @EventHandler(ignoreCancelled = true)
     public void onPlayerHarvest(PlayerHarvestBlockEvent event) {
@@ -202,7 +197,9 @@ public class BountifulYield implements Listener{
         Player player = event.getPlayer();
 
         // Check if player has farmland.bountifulyield perm, vanilla behavior if not
-        if (!player.hasPermission(PermissionManager.BOUNTIFUL_YIELD_PERM)) { return; }
+        if (!player.hasPermission(PermissionManager.BOUNTIFUL_YIELD_PERM)) {
+            return;
+        }
 
         // If harvested block is not a crop, vanilla behavior
         if (!HARVESTABLE_CROPS.contains(blockType)) {
@@ -211,8 +208,6 @@ public class BountifulYield implements Listener{
         handleHarvest(player, block, blockType, "harvest");
         event.setCancelled(true);
     }
-
-
 
 
     // Class to handle the harvest
@@ -232,7 +227,9 @@ public class BountifulYield implements Listener{
 
                 // Return if not fully grown, normal behavior will be followed
                 // Not applicable to towering crops as age does not determine harvestability
-                if (!fullyGrown && (blockType != Material.BAMBOO) && (blockType != Material.SUGAR_CANE) && (blockType != Material.KELP) && (blockType != Material.KELP_PLANT) ) { return false; }
+                if (!fullyGrown && (blockType != Material.BAMBOO) && (blockType != Material.SUGAR_CANE) && (blockType != Material.KELP) && (blockType != Material.KELP_PLANT)) {
+                    return false;
+                }
 
             }
         }
@@ -360,7 +357,7 @@ public class BountifulYield implements Listener{
                 }
 
             } else if (crop == Material.MELON) {
-                int drop = totalMult*ThreadLocalRandom.current().nextInt(3, 8);
+                int drop = totalMult * ThreadLocalRandom.current().nextInt(3, 8);
                 world.dropItemNaturally(location, new ItemStack(crop, drop));
 
             } else {
@@ -382,11 +379,18 @@ public class BountifulYield implements Listener{
                 int drop = totalMult;
                 giveItemOrDrop(player, crop, drop);
 
-                if (block.getBlockData() instanceof CaveVines vines) {vines.setBerries(false); block.setBlockData(vines);}
-                if (block.getBlockData() instanceof CaveVinesPlant vines) {vines.setBerries(false); block.setBlockData(vines);}
+                // Set berry metadata to false
+                if (block.getBlockData() instanceof CaveVines vines) {
+                    vines.setBerries(false);
+                    block.setBlockData(vines);
+                }
+                if (block.getBlockData() instanceof CaveVinesPlant vines) {
+                    vines.setBerries(false);
+                    block.setBlockData(vines);
+                }
             }
 
-            if (crop == Material.SWEET_BERRIES){
+            if (crop == Material.SWEET_BERRIES) {
                 if (block.getBlockData() instanceof Ageable ageable) {
 
                     int currentAge = ageable.getAge();
@@ -394,11 +398,11 @@ public class BountifulYield implements Listener{
                     // implement random chance of 1-2 berry base at age 2, 2-3 berry base at age 4
                     int randomNumber = ThreadLocalRandom.current().nextInt(1, 101);
                     if (currentAge == 2) {
-                        int drop = totalMult*ThreadLocalRandom.current().nextInt(1, 3);
+                        int drop = totalMult * ThreadLocalRandom.current().nextInt(1, 3);
                         giveItemOrDrop(player, crop, drop);
                     }
                     if (currentAge == 3) {
-                        int drop = totalMult*ThreadLocalRandom.current().nextInt(2, 4);
+                        int drop = totalMult * ThreadLocalRandom.current().nextInt(2, 4);
                         giveItemOrDrop(player, crop, drop);
                     }
                     // Reset to age 1
@@ -410,9 +414,6 @@ public class BountifulYield implements Listener{
         }
         return false;
     } // End of handleHarvest
-
-
-
 
 
     private void giveItemOrDrop(Player player, Material item, int drop) {

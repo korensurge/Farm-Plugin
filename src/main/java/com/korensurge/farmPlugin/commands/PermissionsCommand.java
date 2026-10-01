@@ -21,8 +21,6 @@ public class PermissionsCommand implements CommandExecutor, TabCompleter {
     }
 
 
-
-
     // Command Resolver
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
@@ -74,10 +72,9 @@ public class PermissionsCommand implements CommandExecutor, TabCompleter {
 
         // Outcome Message
         String newStatus = enable ? "ACTIVATED" : "DEACTIVATED";
-        sender.sendMessage ("Feature" + featureArg + " is now " + newStatus + " for " + target.getName() + ".");
+        sender.sendMessage("Feature" + featureArg + " is now " + newStatus + " for " + target.getName() + ".");
         return true;
     }
-
 
 
     // Tab Completion
@@ -92,8 +89,11 @@ public class PermissionsCommand implements CommandExecutor, TabCompleter {
         if (args.length == 1) {
             // Suggest features
             List<String> features = List.of("bountifulyield", "preventtrample");
-            for (String f: features) {
-                if (f.startsWith(args[0].toLowerCase())) { completions.add(f); };
+            for (String f : features) {
+                if (f.startsWith(args[0].toLowerCase())) {
+                    completions.add(f);
+                }
+                ;
             }
         } else if (args.length == 2) {
             // Suggest names
@@ -104,8 +104,12 @@ public class PermissionsCommand implements CommandExecutor, TabCompleter {
             }
         } else if (args.length == 3) {
             // Suggest true/false
-            if ("true".startsWith(args[2].toLowerCase())) {completions.add("true");}
-            if ("false".startsWith(args[2].toLowerCase())) {completions.add("false");}
+            if ("true".startsWith(args[2].toLowerCase())) {
+                completions.add("true");
+            }
+            if ("false".startsWith(args[2].toLowerCase())) {
+                completions.add("false");
+            }
         }
 
         return completions;

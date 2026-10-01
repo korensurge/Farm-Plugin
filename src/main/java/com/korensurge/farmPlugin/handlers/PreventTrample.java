@@ -15,6 +15,7 @@ import org.bukkit.event.player.PlayerInteractEvent;
 public class PreventTrample implements Listener {
 
     private final FarmPlugin plugin;
+
     public PreventTrample(FarmPlugin plugin) {
 
         this.plugin = plugin;
