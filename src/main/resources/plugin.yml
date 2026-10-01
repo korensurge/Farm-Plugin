@@ -22,7 +22,7 @@ permissions:
     default: false
   farmplugin.bountifulyield:
     description: Allows player to use custom crop harvest yield mechanics.
-    default: true   # Set to true if active by default for everyone, or false/op
+    default: true
   farmplugin.preventtrample:
     description: Prevents farmland from being trampled when stepped on.
     default: true

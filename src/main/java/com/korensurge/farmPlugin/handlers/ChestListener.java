@@ -23,18 +23,14 @@ import java.util.UUID;
 
 public class ChestListener implements Listener {
 
+    private static final long COOLDOWN_MS = 100;
     private final FarmPlugin plugin;
-
     // Cooldown
     private final Map<UUID, Long> clickCooldowns = new HashMap<>();
-    private static final long COOLDOWN_MS = 100;
 
     public ChestListener(FarmPlugin plugin) {
         this.plugin = plugin;
     }
-
-
-
 
 
     // Prevent adding or removing items from chest by clicking, spawn items in player inventory
@@ -143,9 +139,6 @@ public class ChestListener implements Listener {
     }
 
 
-
-
-
     // Handle dragging items into a chest and prevent if not an admin
     @EventHandler
     public void onInventoryDrag(InventoryDragEvent event) {
@@ -156,7 +149,7 @@ public class ChestListener implements Listener {
 
         Inventory topInventory = event.getView().getTopInventory();
         // Check if interacting inventory is of a chest
-        if (topInventory.getType() != InventoryType.CHEST || topInventory.getLocation () == null) {
+        if (topInventory.getType() != InventoryType.CHEST || topInventory.getLocation() == null) {
             return;
         }
 
