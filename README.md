@@ -60,7 +60,7 @@ Infinite Chest:
 * Allows creation of an infinite chest source
   * Clicking upon an item in the chest will spawn 1 clone of that item in player inventory
 * Users with Admin permissions are able to manage chest contents
-  * Adjust chest infinite status using /infinitechest <true|false>
+  * Adjust target chest infinite status within 5 blocks using /infinitechest <true|false>
   * All standard interactions for adding items to the chest
   * Remove by Shift+Click or using 1-9
   * Standard clicking within an infinite chest will still perform the infinite functionality
