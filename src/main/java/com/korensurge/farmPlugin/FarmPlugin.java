@@ -2,6 +2,7 @@ package com.korensurge.farmPlugin;
 
 import com.korensurge.farmPlugin.commands.PermissionsCommand;
 import com.korensurge.farmPlugin.handlers.BountifulYield;
+import com.korensurge.farmPlugin.handlers.PreventTrample;
 import com.korensurge.farmPlugin.manager.PermissionManager;
 import org.bukkit.plugin.java.JavaPlugin;
 
@@ -23,6 +24,7 @@ public final class FarmPlugin extends JavaPlugin {
 
         // Activate Handlers
         getServer().getPluginManager().registerEvents(new BountifulYield(this), this);
+        getServer().getPluginManager().registerEvents(new PreventTrample(this), this);
         // Listen for commands to trigger classes
     }
 
